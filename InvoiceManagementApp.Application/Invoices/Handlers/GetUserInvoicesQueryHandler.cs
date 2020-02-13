@@ -1,4 +1,5 @@
-﻿using InvoiceManagementApp.Application.Common.Interfaces;
+﻿using AutoMapper;
+using InvoiceManagementApp.Application.Common.Interfaces;
 using InvoiceManagementApp.Application.Invoices.Queries;
 using InvoiceManagementApp.Application.Invoices.ViewModels;
 using MediatR;
@@ -15,10 +16,12 @@ namespace InvoiceManagementApp.Application.Invoices.Handlers
     public class GetUserInvoicesQueryHandler : IRequestHandler<GetUserInvoicesQuery, IList<InvoiceVm>>
     {
         private readonly IApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-        public GetUserInvoicesQueryHandler(IApplicationDbContext context)
+        public GetUserInvoicesQueryHandler(IApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
         public async Task<IList<InvoiceVm>> Handle(GetUserInvoicesQuery request, CancellationToken cancellationToken)
         {
@@ -27,30 +30,7 @@ namespace InvoiceManagementApp.Application.Invoices.Handlers
                 .Where(i => i.CreatedBy == request.User).ToListAsync();
             if(invoices != null)
             {
-                result = invoices.Select(i => new InvoiceVm
-                {
-                    AmountPaid = i.AmountPaid,
-                    Created = i.Created,
-                    Date = i.Date,
-                    Discount = i.Discount,
-                    DiscountType = i.DiscountType,
-                    DueDate = i.DueDate,
-                    From = i.From,
-                    Id = i.Id,
-                    InvoiceNumber = i.InvoiceNumber,
-                    Logo = i.Logo,
-                    PaymentTerms = i.PaymentTerms,
-                    Tax = i.Tax,
-                    TaxType = i.TaxType,
-                    To = i.To,
-                    InvoiceItems = i.InvoiceItems.Select(item => new InvoiceItemVm
-                    {
-                        Id = item.Id,
-                        Item = item.Item,
-                        Quantity = item.Quantity,
-                        Rate = item.Rate
-                    }).ToList()
-                }).ToList();
+                result = _mapper.Map<List<InvoiceVm>>(invoices);
             }
 
             return result;
