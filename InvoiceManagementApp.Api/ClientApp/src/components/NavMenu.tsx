@@ -4,10 +4,18 @@ import { Link } from 'react-router-dom';
 import { LoginMenu } from './api-authorization/LoginMenu';
 import './NavMenu.css';
 
-export class NavMenu extends Component {
+interface IProps {
+
+}
+
+interface IState {
+  collapsed: boolean
+}
+
+export class NavMenu extends Component<IProps, IState> {
   static displayName = NavMenu.name;
 
-  constructor (props) {
+  constructor (props: IProps) {
     super(props);
 
     this.toggleNavbar = this.toggleNavbar.bind(this);
