@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import 'react-dates/initialize';
 import 'react-dates/lib/css/_datepicker.css';
 import { SingleDatePicker } from 'react-dates';
-import { Card, CardBody, Row, Col, Input, FormGroup, Label } from 'reactstrap'
-import { CreateInvoiceCommand, DiscountType, TaxType, InvoiceItemVm } from '../../utils/api';
+import { Card, CardBody, Row, Col, Input, FormGroup, Label, Table, Button, CardFooter } from 'reactstrap'
+import { CreateInvoiceCommand, DiscountType, TaxType, InvoiceItemVm, InvoicesClient } from '../../utils/api';
+import { getSubtotal, getTotal, getBalance } from '../../utils/invoiceUtils';
 import moment from 'moment';
 
 interface ICreateInvoice {
@@ -28,8 +29,27 @@ const CreateInvoice: React.FC<ICreateInvoice> = ({ }) => {
     amountPaid: undefined,
     invoiceItems: [new InvoiceItemVm({ id: 0, item: '', quantity: undefined, rate: undefined, amount: 0 })]
   });
-
+  
   const [invoiceData, setInvoiceData] = useState<CreateInvoiceCommand>(initValue);
+
+  const client = new InvoicesClient();
+
+  const updateInvoiceItem = (property: 'item' | 'quantity' | 'rate', index: number, value: any) => {
+    if (invoiceData && invoiceData.invoiceItems) {
+      const items = [...invoiceData.invoiceItems];
+      items[index][property] = value;
+      setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, invoiceItems: [...items] }));
+    }
+  }
+
+  const addInvoiceItem = () => {
+    if (invoiceData && invoiceData.invoiceItems) {
+      const items = [...invoiceData.invoiceItems];
+      items.push(new InvoiceItemVm({ id: 0, item: '', quantity: undefined, rate: undefined, amount: 0 }));
+      setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, invoiceItems: [...items] }));
+    }
+  }
+
   return (
     <div className="col-md-12">
       <Card>
@@ -118,11 +138,135 @@ const CreateInvoice: React.FC<ICreateInvoice> = ({ }) => {
               </FormGroup>
               <Row>
                 <Label md={4} style={{ fontWeight: 'bold' }}>Balance</Label>
-                <Label md={8} style={{ fontWeight: 'bold' }}>8000</Label>
+                <Label md={8} style={{ fontWeight: 'bold' }}>{getBalance(invoiceData)}</Label>
               </Row>
             </Col>
           </Row>
+          <Row>
+            <Col md={12}>
+              <Table striped>
+                <thead>
+                  <tr>
+                    <th style={{ width: '60%' }}>Item</th>
+                    <th>Quantity</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceData.invoiceItems && invoiceData.invoiceItems.map((invoiceItem: InvoiceItemVm, index: number) =>
+                    <tr key={`item-${index}`}>
+                      <td>
+                        <Input
+                          type="text"
+                          placeholder="Item description"
+                          value={invoiceItem.item}
+                          onChange={(evt: any) => updateInvoiceItem('item', index, evt.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={invoiceItem.quantity || ''}
+                          onChange={(evt: any) => updateInvoiceItem('quantity', index, evt.target.value ? parseInt(evt.target.value) : undefined)}
+                        />
+                      </td>
+                      <td>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={invoiceItem.rate || ''}
+                          onChange={(evt: any) => updateInvoiceItem('rate', index, evt.target.value ? parseInt(evt.target.value) : undefined)}
+                        />
+                      </td>
+                      <td>
+                        {invoiceItem.quantity && invoiceItem.rate && invoiceItem.quantity * invoiceItem.rate}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+              <Button className="btn btn-primary" onClick={() => addInvoiceItem()}>
+                Add Item
+              </Button>
+            </Col>
+          </Row>
+          <Row>
+            <Col md={6}></Col>
+            <Col md={6}>
+              <FormGroup row>
+                <Label md={4}>Subtotal</Label>
+                <Col md={8}>
+                  {getSubtotal(invoiceData.invoiceItems)}
+                </Col>
+              </FormGroup>
+              <FormGroup row>
+                <Label md={4}>Discount</Label>
+                <Col md={4}>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={invoiceData.discount || ''}
+                    onChange={(evt: any) => setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, discount: evt.target.value ? parseInt(evt.target.value) : undefined }))} />
+                </Col>
+                <Col md={4}>
+                  <Input
+                    type="select"
+                    value={invoiceData.discountType}
+                    onChange={(evt: any) => setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, discountType: evt.target.value }))}>
+                    <option value={DiscountType.Flat}>Flat rate</option>
+                    <option value={DiscountType.Percentage}>Percentage</option>
+                  </Input>
+                </Col>
+              </FormGroup>
+              <FormGroup row>
+                <Label md={4}>Tax</Label>
+                <Col md={4}>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={invoiceData.tax || ''}
+                    onChange={(evt: any) => setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, tax: evt.target.value ? parseInt(evt.target.value) : undefined }))} />
+                </Col>
+                <Col md={4}>
+                  <Input
+                    type="select"
+                    value={invoiceData.taxType}
+                    onChange={(evt: any) => setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, taxType: evt.target.value }))}>
+                    <option value={TaxType.Flat}>Flat rate</option>
+                    <option value={TaxType.Percentage}>Percentage</option>
+                  </Input>
+                </Col>
+              </FormGroup>
+              <FormGroup row>
+                <Label md={4}>Total</Label>
+                <Col md={8}>
+                  {getTotal(invoiceData)}
+                </Col>
+              </FormGroup>
+              <FormGroup row>
+                <Label md={4}>Amount Paid</Label>
+                <Col md={8}>
+                  <Input type="number"
+                    placeholder="0"
+                    value={invoiceData.amountPaid || ''}
+                    onChange={(evt: any) => setInvoiceData(new CreateInvoiceCommand({ ...invoiceData, amountPaid: evt.target.value ? parseInt(evt.target.value) : undefined }))} />
+                </Col>
+              </FormGroup>
+            </Col>
+          </Row>
         </CardBody>
+        <CardFooter>
+          <Button
+            className="btn btn-primary"
+            onClick={() => {
+              client.create(invoiceData)
+              .then(() => console.log('success'))
+              .catch(() => console.log('error'))
+            }}
+          >Save</Button>
+        </CardFooter>
       </Card>
     </div>
   )
